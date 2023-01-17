@@ -14,7 +14,7 @@
     <PackageIcon>packageIcon.png</PackageIcon>
     <RepositoryUrl>https://github.com/CSESoftwareInc/Selenium.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <Description>A Library to be combined with DotNetSeleniumExtras.PageObjects.Core as a way to give you more tools built in when you </Description>
+    <Description>A library to be combined with DotNetSeleniumExtras.PageObjects.Core as a way to give you more tools built in when you start your testing with the Page Object Model design pattern.</Description>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
