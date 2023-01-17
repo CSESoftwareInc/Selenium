@@ -58,6 +58,7 @@ Sometimes, the above waiting functions aren't enough, and you need to just pause
 Wait.Seconds(3);
 Wait.Seconds(1.5);
 Wait.Milliseconds(500);
+Wait.Microfortnights(5)
 ```
 
 
