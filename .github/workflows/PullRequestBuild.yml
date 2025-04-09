@@ -1,0 +1,33 @@
+name: "Pull Request Build"
+
+env:
+  SOLUTION: 'src/CSESoftware.Selenium.sln'
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Nuget Restore for App
+      run: dotnet restore "${{ env.SOLUTION }}"
+  
+    - name: Build Solution
+      run: dotnet publish "${{ env.SOLUTION }}" --configuration Release
+      env:
+        CI: false
+
+    - name: Run Unit Tests on Solution
+      run: dotnet test "${{ env.SOLUTION }}" --no-build --configuration Release --verbosity normal
+
+    - name: Dependency Review
+      uses:  actions/dependency-review-action@v4
+      with:
+        fail-on-severity: high
