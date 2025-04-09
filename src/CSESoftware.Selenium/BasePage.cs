@@ -23,7 +23,7 @@ public abstract class BasePage<T> where T : BasePage<T>
     {
         var page = Activator.CreateInstance(typeof(T), driver);
 
-        if (page == null) throw new PageException("Page was unable to laod.");
+        if (page == null) throw new PageException("Page was unable to load.");
 
         return (T)page;
     }
@@ -42,10 +42,30 @@ public abstract class BasePage<T> where T : BasePage<T>
         if (!equal) throw new PageException($"Path does not match (Expected: {path}, Actual: {currentPath})");
     }
 
-    protected virtual void WaitFor(Func<IWebDriver, bool> condition, double seconds = 5)
+    protected virtual void WaitFor(Func<IWebDriver, bool> condition, double seconds = 5, int retries = 0, string name = "Item")
     {
-        var wait = new WebDriverWait(WebDriver, TimeSpan.FromSeconds(seconds));
-        wait.Until(condition);
+        if (retries <= 0)
+        {
+            var wait = new WebDriverWait(WebDriver, TimeSpan.FromSeconds(seconds));
+            wait.Until(condition);
+        }
+        else
+        {
+            for (var attempt = 0; attempt <= retries; attempt++)
+            {
+                try
+                {
+                    var wait = new WebDriverWait(WebDriver, TimeSpan.FromSeconds(seconds));
+                    wait.Until(condition);
+                    return;
+                }
+                catch
+                {
+                    Wait.Seconds(1);
+                }
+            }
+            throw new TimeoutException($"{name} could not be found in sufficient time (Waited {seconds} seconds. Retried {retries} times)");
+        }
     }
 
     protected virtual void WaitForElement(By by, double seconds = 5)
