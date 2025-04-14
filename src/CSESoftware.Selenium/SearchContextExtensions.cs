@@ -9,4 +9,10 @@ public static class SearchContextExtensions
         var elements = driver.FindElements(by);
         return elements.Any();
     }
+
+    public static bool ElementDisplayed(this ISearchContext driver, By by)
+    {
+        var elements = driver.FindElements(by);
+        return elements.Any() && elements.All(x => x.Displayed);
+    }
 }

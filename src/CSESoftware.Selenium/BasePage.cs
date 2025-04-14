@@ -42,31 +42,113 @@ public abstract class BasePage<T> where T : BasePage<T>
         if (!equal) throw new PageException($"Path does not match (Expected: {path}, Actual: {currentPath})");
     }
 
-    protected virtual void WaitFor(Func<IWebDriver, bool> condition, double seconds = 5)
+    protected virtual void WaitFor(Func<IWebDriver, bool> condition, double seconds = 5, int retries = 1)
     {
-        var wait = new WebDriverWait(WebDriver, TimeSpan.FromSeconds(seconds));
-        wait.Until(condition);
+        var attempt = 0;
+
+        while (attempt <= retries)
+        {
+            try
+            {
+                var wait = new WebDriverWait(WebDriver, TimeSpan.FromSeconds(seconds));
+                wait.Until(condition);
+                return;
+            }
+            catch (WebDriverException ex) when (IsRetryableException(ex))
+            {
+                if (attempt == retries)
+                    throw; // out of retries, throw to fail the test
+
+                attempt++;
+            }
+            catch (WebDriverTimeoutException)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
     }
 
-    protected virtual void WaitForElement(By by, double seconds = 5)
+    protected virtual bool TryWaitFor(Func<IWebDriver, bool> condition, double seconds = 5, int retries = 1)
     {
-        WaitFor(e => e.ElementExists(by), seconds);
+        try
+        {
+            WaitFor(condition, seconds, retries);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
-    protected virtual void WaitForElement(Expression<Func<T, object>> property, double seconds = 5)
+    private static bool IsRetryableException(WebDriverException ex)
     {
-        var prop = typeof(T).GetProperty(ParsePropertyName(property), BasePage<T>.BindingFlags);
-        var attribute = prop?.GetCustomAttribute(typeof(FindsByAttribute), false);
-
-        if (attribute == null) throw new ElementException("FindsBy attribute missing from property");
-
-        WaitForElement(((FindsByAttribute)attribute).Finder, seconds);
+        return ex
+            is StaleElementReferenceException
+            or NoSuchElementException
+            or ElementNotInteractableException
+            or ElementClickInterceptedException
+            or InvalidElementStateException
+            or ElementNotVisibleException
+            or MoveTargetOutOfBoundsException
+            or JavaScriptException;
     }
 
-    private static string ParsePropertyName(Expression<Func<T, object>> property)
+    protected virtual void WaitForElementExists(By by, double seconds = 5, int retries = 1)
     {
-        var body = property.Body.ToString();
-        return body.Split('.').Last();
+        WaitFor(e => e.ElementExists(by), seconds, retries);
+    }
+
+    protected virtual void WaitForElementExists(Expression<Func<T, object>> property, double seconds = 5, int retries = 1)
+    {
+        WaitForElementExists(GetByForProperty(property), seconds, retries);
+    }
+
+    protected virtual void WaitForElementDisplayed(By by, double seconds = 5, int retries = 1)
+    {
+        WaitFor(e => e.ElementDisplayed(by), seconds, retries);
+    }
+
+    protected virtual void WaitForElementDisplayed(Expression<Func<T, object>> property, double seconds = 5, int retries = 1)
+    {
+        WaitForElementDisplayed(GetByForProperty(property), seconds, retries);
+    }
+
+    protected virtual void WaitForElementHidden(By by, double seconds = 5, int retries = 1)
+    {
+        WaitFor(e => !e.ElementDisplayed(by), seconds, retries);
+    }
+
+    protected virtual void WaitForElementHidden(Expression<Func<T, object>> property, double seconds = 5, int retries = 1)
+    {
+        WaitForElementHidden(GetByForProperty(property), seconds, retries);
+    }
+
+    protected virtual By GetByForProperty(Expression<Func<T, object>> property)
+    {
+        var memberExpression = property.Body switch
+        {
+            MemberExpression me => me,
+            UnaryExpression { Operand: MemberExpression me } => me,
+            _ => throw new ElementException("Invalid property expression")
+        };
+
+        if (memberExpression.Member is not PropertyInfo prop)
+            throw new ElementException("Expression does not refer to a property");
+
+        if (prop == null) throw new ElementException($"Could not find property");
+
+        var attribute = prop.GetCustomAttribute(typeof(FindsByAttribute), false);
+
+        if (attribute == null) throw new ElementException($"FindsBy attribute missing from property");
+
+        var by = ((FindsByAttribute)attribute).Finder;
+
+        return by;
     }
 
     private static BindingFlags BindingFlags => BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
