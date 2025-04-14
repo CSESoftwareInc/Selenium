@@ -23,7 +23,7 @@ public abstract class BasePage<T> where T : BasePage<T>
     {
         var page = Activator.CreateInstance(typeof(T), driver);
 
-        if (page == null) throw new PageException("Page was unable to laod.");
+        if (page == null) throw new PageException("Page was unable to load.");
 
         return (T)page;
     }
